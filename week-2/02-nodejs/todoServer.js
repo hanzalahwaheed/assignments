@@ -15,15 +15,15 @@
     Description: Returns a specific todo item identified by its ID.
     Response: 200 OK with the todo item in JSON format if found, or 404 Not Found if not found.
     Example: GET http://localhost:3000/todos/123
-    
-  3. POST /todos - Create a new todo item
+
+  3.POST /todos - Create a new todo item
     Description: Creates a new todo item.
     Request Body: JSON object representing the todo item.
     Response: 201 Created with the ID of the created todo item in JSON format. eg: {id: 1}
     Example: POST http://localhost:3000/todos
     Request Body: { "title": "Buy groceries", "completed": false, description: "I should buy groceries" }
     
-  4. PUT /todos/:id - Update an existing todo item by ID
+  4.PUT /todos/:id - Update an existing todo item by ID
     Description: Updates an existing todo item identified by its ID.
     Request Body: JSON object representing the updated todo item.
     Response: 200 OK if the todo item was found and updated, or 404 Not Found if not found.
@@ -39,11 +39,132 @@
 
   Testing the server - run `npm run test-todoServer` command in terminal
  */
-  const express = require('express');
-  const bodyParser = require('body-parser');
-  
-  const app = express();
-  
-  app.use(bodyParser.json());
-  
-  module.exports = app;
+const express = require("express");
+const bodyParser = require("body-parser");
+const app = express();
+const fs = require("fs");
+
+app.use(bodyParser.json());
+
+app.get("/todos", (req, res) => {
+  fs.readFile("todos.json", "utf8", (err, data) => {
+    if (err) throw err;
+    const todos = JSON.parse(data);
+    res.status(200).json(todos);
+  });
+});
+
+app.get("/todos/:id", (req, res) => {
+  const ID = req.params.id;
+  fs.readFile("todos.json", "utf-8", (err, data) => {
+    if (err) throw err;
+    const todos = JSON.parse(data);
+
+    let flag = 0;
+    for (let i = 0; i < todos.length; i++) {
+      if (todos[i].id == ID) {
+        flag = 1;
+        break;
+      }
+    }
+    if (flag == 0) {
+      res.status(404).json();
+      return;
+    }
+
+    let obj = {};
+    for (let i = 0; i < todos.length; i++) {
+      if (todos[i].id == ID) {
+        obj = todos[i];
+        break;
+      }
+    }
+    res.status(200).json(obj);
+  });
+});
+
+app.post("/todos", function (req, res) {
+  const newTodo = {
+    id: Math.floor(Math.random() * 1000000),
+    title: req.body.title,
+    description: req.body.description,
+  };
+  fs.readFile("todos.json", "utf8", (err, data) => {
+    if (err) throw err;
+    const todos = JSON.parse(data);
+    todos.push(newTodo);
+    fs.writeFile("todos.json", JSON.stringify(todos), (err) => {
+      if (err) throw err;
+      res.status(201).json(newTodo);
+    });
+  });
+});
+
+app.put("/todos/:id", (req, res) => {
+  const ID = req.params.id;
+  const newTodo = {
+    id: ID,
+    title: req.body.title,
+    completed: req.body.completed,
+  };
+
+  fs.readFile("todos.json", "utf8", (err, data) => {
+    if (err) throw err;
+    const todos = JSON.parse(data);
+
+    let flag = 0;
+    for (let i = 0; i < todos.length; i++) {
+      if (todos[i].id == ID) {
+        todos[i] = newTodo;
+        flag = 1;
+        break;
+      }
+    }
+
+    if (flag == 0) {
+      res.status(404).json();
+      return;
+    }
+
+    fs.writeFile("todos.json", JSON.stringify(todos), (err) => {
+      if (err) throw err;
+      res.status(200).json(todos);
+    });
+  });
+});
+
+app.delete("/todos/:id", (req, res) => {
+  const ID = req.params.id;
+
+  fs.readFile("todos.json", "utf8", (err, data) => {
+    if (err) throw err;
+    const todos = JSON.parse(data);
+
+    let flag = 0;
+    for (let i = 0; i < todos.length; i++) {
+      if (todos[i].id == ID) {
+        flag = 1;
+        break;
+      }
+    }
+    if (flag == 0) res.status(404).json();
+
+    let newTodos = [];
+    for (let i = 0; i < todos.length; i++) {
+      if (todos[i].id != ID) {
+        newTodos.push(todos[i]);
+      }
+    }
+
+    fs.writeFile("todos.json", JSON.stringify(newTodos), (err) => {
+      if (err) throw err;
+      res.status(200).json();
+    });
+  });
+});
+
+// app.listen(3000, () => {
+//   console.log("server running");
+// });
+
+module.exports = app;
